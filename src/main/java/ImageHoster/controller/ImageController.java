@@ -49,7 +49,7 @@ public class ImageController {
 
 
     /** comments by Archana: **/
-//Issue :Error occurs if an image is created with the same title that has been used by another image
+//Issue :Navigation to the images having the same title is not possible
 //Change : Changed the parameter in getImage() to imageId instead of title
 //Also updated the mapping  from "/images/{title}" to "/images/{imageId}/{title}"
 //Included the imageId as the Path Variable
@@ -101,15 +101,31 @@ public class ImageController {
 
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
-    @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
-        Image image = imageService.getImage(imageId);
 
-        String tags = convertTagsToString(image.getTags());
-        model.addAttribute("image", image);
-        model.addAttribute("tags", tags);
-        return "images/edit";
+    /** comments by Archana: **/
+    //Issue: Non-Owner of the image can edit the image
+    //Issue Resolution : Only the owner of the image need to edit the image
+    //Identifying the current user using HttpSession and owner of the image by userId on the base of user comparision
+    //Added an error message and display , if a non owner is trying to edit the image
+    //Allowing the owner to edit the image and after successfull editing should return to images/edit
+    @RequestMapping(value = "/editImage")
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model,HttpSession session) {
+        Image image = imageService.getImage(imageId);
+        User user = (User) session.getAttribute("loggeduser");
+
+        if (image.getUser().getId() != user.getId()) {
+            String error = "Only the owner of the image can edit the image";
+            model.addAttribute("editError", error);
+            model.addAttribute("image", image);
+            return "images/image";
+        } else {
+            String tags = convertTagsToString(image.getTags());
+            model.addAttribute("image", image);
+            model.addAttribute("tags", tags);
+            return "images/edit";
+        }
     }
+
 
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
     //The method receives the imageFile, imageId, updated image, along with the Http Session
@@ -122,27 +138,45 @@ public class ImageController {
 
     //The method also receives tags parameter which is a string of all the tags separated by a comma using the annotation @RequestParam
     //The method converts the string to a list of all the tags using findOrCreateTags() method and sets the tags attribute of an image as a list of all the tags
+
+    /** comments by Archana: **/
+    //Added the model attribute , HttpSession and modified the method with an addition of error message
+    //handled the ArrayIndexOutOfBoundsException , as this exception is thrown when no tag is assigned for an image
+    //uncommented the code in image.html <div th:if="${editError}">Only the owner of the image can edit the image</div>
+
     @RequestMapping(value = "/editImage", method = RequestMethod.PUT)
-    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId, @RequestParam("tags") String tags, Image updatedImage, HttpSession session) throws IOException {
+    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId,
+                                  @RequestParam("tags") String tags, Image updatedImage, Model model,HttpSession session)
+            throws IOException, ArrayIndexOutOfBoundsException {
 
         Image image = imageService.getImage(imageId);
-        String updatedImageData = convertUploadedFileToBase64(file);
-        List<Tag> imageTags = findOrCreateTags(tags);
-
-        if (updatedImageData.isEmpty())
-            updatedImage.setImageFile(image.getImageFile());
-        else {
-            updatedImage.setImageFile(updatedImageData);
-        }
-
-        updatedImage.setId(imageId);
         User user = (User) session.getAttribute("loggeduser");
-        updatedImage.setUser(user);
-        updatedImage.setTags(imageTags);
-        updatedImage.setDate(new Date());
+        try {
+            if (image.getUser().getId() != user.getId()) {
+                String error = "Only the owner of the image can edit the image";
+                model.addAttribute("editError", error);
+                return "images/image";
+            } else {
+                String updatedImageData = convertUploadedFileToBase64(file);
+                List<Tag> imageTags = findOrCreateTags(tags);
 
-        imageService.updateImage(updatedImage);
-        return "redirect:/images/" + updatedImage.getTitle();
+                if (updatedImageData.isEmpty())
+                    updatedImage.setImageFile(image.getImageFile());
+                else {
+                    updatedImage.setImageFile(updatedImageData);
+                }
+
+                updatedImage.setId(imageId);
+                updatedImage.setUser(user);
+                updatedImage.setTags(imageTags);
+                updatedImage.setDate(new Date());
+                imageService.updateImage(updatedImage);
+                return "redirect:/images/" + imageId + "/" + updatedImage.getTitle();
+            }
+        }catch (ArrayIndexOutOfBoundsException Are) {
+            System.out.println("Please add tags for enabling edit image ");
+        }
+        return "images/edit";
     }
 
 
