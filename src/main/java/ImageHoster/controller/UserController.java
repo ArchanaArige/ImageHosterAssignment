@@ -39,10 +39,42 @@ public class UserController {
 
     //This controller method is called when the request pattern is of type 'users/registration' and also the incoming request is of POST type
     //This method calls the business logic and after the user record is persisted in the database, directs to login page
+
+
+    /** comments by Archana: **/
+    //NewFeature Implementation : To check the strength of the password entered by the user at the time of registration.
+    //Resolution : Defined the method isValidPassword(password) and called in this method registerUser()
+    //Added the model attribute with the key passwordTypeError
+    //The password should contain atleast one alphabet, one digit and one special character
+    //If the password doesnt satisfy the above criterion it displays an error message
+    //On successfull registration user is directed to the login page
+    //uncommented the required code in registration.html
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
-    public String registerUser(User user) {
-        userService.registerUser(user);
-        return "redirect:/users/login";
+    public String registerUser(User user, Model model) {
+        String enteredPassword = user.getPassword();
+        if (!isValidPassword(enteredPassword)) {
+            String error = "Password must contain atleast 1 alphabet, 1 number & 1 special character";
+            model.addAttribute("passwordTypeError", error);
+            model.addAttribute("User", user);
+            return "users/registration";
+        } else {
+            userService.registerUser(user);
+            return "users/login";
+        }
+    }
+
+
+    /** comments by Archana: **/
+    //A method to check the password strength using regularExpression(regex)
+    public static boolean isValidPassword(String password) {
+        //Regex to match any string with out special characters
+        String noSpecialCharRegex = "([a-zA-Z0-9]*)";
+        //Regex to match any string with alphabet, digits and any character
+        String passwordregex = "([a-zA-Z].*\\d.*)";
+        if (password.matches(passwordregex) && (!password.matches(noSpecialCharRegex))) {
+            return true;
+        }
+        return false;
     }
 
     //This controller method is called when the request pattern is of type 'users/login'
