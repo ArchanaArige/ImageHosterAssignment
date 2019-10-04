@@ -51,6 +51,14 @@ public class Image {
     @ManyToMany(fetch = FetchType.LAZY)
     private List<Tag> tags = new ArrayList<>();
 
+    /**Comments by Archana: **/
+    //Defined the mapping for image and comment table
+    //The 'image' table is mapped to 'comment' table with One:many mapping
+    //The table (primary key) is referenced by the 'image' field in the 'comment' table
+    @OneToMany(mappedBy = "image", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    private List<Comment> comments = new ArrayList<>();
+
+
     public Image() {
     }
 
@@ -125,5 +133,15 @@ public class Image {
 
     public void setTags(List<Tag> tags) {
         this.tags = tags;
+    }
+
+    /**Comments by Archana: **/
+    //generated getter and setter for Comment
+    public List<Comment> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<Comment> comments) {
+        this.comments = comments;
     }
 }
