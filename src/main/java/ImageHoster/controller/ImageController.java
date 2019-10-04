@@ -45,9 +45,19 @@ public class ImageController {
     //Also now you need to add the tags of an image in the Model type object
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
-    @RequestMapping("/images/{title}")
-    public String showImage(@PathVariable("title") String title, Model model) {
-        Image image = imageService.getImageByTitle(title);
+
+
+
+    /** comments by Archana: **/
+//Issue :Error occurs if an image is created with the same title that has been used by another image
+//Change : Changed the parameter in getImage() to imageId instead of title
+//Also updated the mapping  from "/images/{title}" to "/images/{imageId}/{title}"
+//Included the imageId as the Path Variable
+//Images.html updated the anchor tag from <a th:href="'/images/' +${i.title}"> to <a th:href="'/images/' +${i.id} +'/' +${i.title}">
+    @RequestMapping("/images/{imageId}/{title}")
+    public String showImage(@PathVariable("title") String title, @PathVariable("imageId") Integer imageId,Model model) {
+        //Image image = imageService.getImageByTitle(title);
+        Image image = imageService.getImage(imageId);
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
         return "images/image";
