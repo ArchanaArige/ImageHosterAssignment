@@ -183,10 +183,28 @@ public class ImageController {
     //This controller method is called when the request pattern is of type 'deleteImage' and also the incoming request is of DELETE type
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
+
+    /** comments by Archana: **/
+    //Issue: Non-Owner of the image can delete the image
+    //Issue Resolution : Only the owner of the image need to delete the image
+    //Identifying the current user using HttpSession and owner of the image by userId on the base of user comparision
+    //Added an error message and display , if a non owner is trying to delete the image
+    //Allowing the owner to delete the image and after successfull deletion should return to /images
+    //Added the model attribute , HttpSession and modified the method with an addition of error message
+    //uncommented the code in image.html <div th:if="${deleteError}">Only the owner of the image can delete the image</div>
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
-        imageService.deleteImage(imageId);
-        return "redirect:/images";
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, Model model,HttpSession session) {
+        Image image = imageService.getImage(imageId);
+        User user = (User) session.getAttribute("loggeduser");
+        if (image.getUser().getId() != user.getId()) {
+            String error = "Only the owner of the image can delete the image";
+            model.addAttribute("image", image);
+            model.addAttribute("deleteError", error);
+            return "images/image";
+        } else {
+            imageService.deleteImage(imageId);
+            return "redirect:/images";
+        }
     }
 
 
@@ -198,21 +216,29 @@ public class ImageController {
     //findOrCreateTags() method has been implemented, which returns the list of tags after converting the ‘tags’ string to a list of all the tags and also stores the tags in the database if they do not exist in the database. Observe the method and complete the code where required for this method.
     //Try to get the tag from the database using getTagByName() method. If tag is returned, you need not to store that tag in the database, and if null is returned, you need to first store that tag in the database and then the tag is added to a list
     //After adding all tags to a list, the list is returned
-    private List<Tag> findOrCreateTags(String tagNames) {
+
+
+    /** comments by Archana: **/
+    //handled NullPointerException as when the tags assigned are null to the image
+    private List<Tag> findOrCreateTags(String tagNames) throws  NullPointerException {
         StringTokenizer st = new StringTokenizer(tagNames, ",");
         List<Tag> tags = new ArrayList<Tag>();
+        try {
+            while (st.hasMoreTokens()) {
+                String tagName = st.nextToken().trim();
+                Tag tag = tagService.getTagByName(tagName);
 
-        while (st.hasMoreTokens()) {
-            String tagName = st.nextToken().trim();
-            Tag tag = tagService.getTagByName(tagName);
-
-            if (tag == null) {
-                Tag newTag = new Tag(tagName);
-                tag = tagService.createTag(newTag);
+                if (tag == null) {
+                    Tag newTag = new Tag(tagName);
+                    tag = tagService.createTag(newTag);
+                }
+                tags.add(tag);
             }
-            tags.add(tag);
+            return tags;
+        } catch (NullPointerException npe) {
+            System.out.println("Please add tags for enabling edit image");
+            return null;
         }
-        return tags;
     }
 
 
